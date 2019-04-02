@@ -1,0 +1,6 @@
+# 使用的语言
+language: android
+
+# 执行命令脚本
+script:
+    true
