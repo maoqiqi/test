@@ -10,6 +10,10 @@ ViewModel类旨在以生命周期有意识的方式存储和管理用户界面�
 * [在片段之间共享数据](#在片段之间共享数据)
 * [用ViewModel替换加载器](#用ViewModel替换加载器)
 * [更多的信息](#更多的信息)
+* [对于ViewModel保存状态模块](#对于ViewModel保存状态模块)
+  * [设置和使用](#设置和使用)
+  * [存储和检索值](#存储和检索值)
+
 
 ## 概述
 
@@ -159,3 +163,21 @@ ViewModel与Room和LiveData一起工作来替换加载器。视图模型确保�
 有关如何跨配置更改加载、持久化和管理数据的信息，请参阅[Saving UI States](saving_states.md)。
 
 Android应用程序架构指南建议构建一个repository类来处理这些功能。
+
+
+## 对于ViewModel保存状态模块
+
+正如在[Saving UI States](saving_states.md#使用onSaveInstanceState来处理系统启动的进程死亡)文章中提到的，ViewModel对象可以处理配置更改，
+因此您不需要担心旋转或其他情况下的状态。但是，如果需要处理系统引发的进程死亡，则可能需要使用onSaveInstanceState()作为备份。
+
+UI状态通常存储或引用在ViewModel对象中，而不是活动中;因此，使用onSaveInstanceState()需要一些该模块可以为您处理的样板。
+
+当模块设置好后，ViewModel对象通过它的构造函数接收一个SavedStateHandle对象。这是一个键值映射，以让您在保存状态下写入和检索对象。
+这些值将在系统终止进程后保持不变，并通过同一对象保持可用。
+
+> **注意**:状态必须简单且轻量级。对于复杂或大型数据，应该使用[本地持久性](saving_states.md#使用本地持久性来处理复杂或大型数据的进程死亡)。
+
+### 设置和使用
+
+
+### 存储和检索值
