@@ -1,4 +1,4 @@
-# 安卓架构组件 Lifecycle
+# Handling Lifecycle
 
 生命周期感知组件执行操作以响应另一个组件（例如活动和片段）的生命周期状态的更改。这些组件可以帮助您生成更易于组织、更容易维护的轻量级代码。
 
@@ -6,8 +6,10 @@
 ## 目录
 
 * [概述](#概述)
+* [添加依赖](#添加依赖)
 * [生命周期](#生命周期)
 * [LifecycleOwner](#LifecycleOwner)
+  * [实现自定义LifecycleOwner](#实现自定义LifecycleOwner)
 * [生命周期感知组件的最佳实践](#生命周期感知组件的最佳实践)
 * [生命周期感知组件的用例](#生命周期感知组件的用例)
 * [处理停止事件](#处理停止事件)
@@ -53,16 +55,14 @@ class MyActivity extends AppCompatActivity {
     public void onStart() {
         super.onStart();
         myLocationListener.start();
-        // manage other components that need to respond
-        // to the activity lifecycle
+        // manage other components that need to respond to the activity lifecycle
     }
 
     @Override
     public void onStop() {
         super.onStop();
         myLocationListener.stop();
-        // manage other components that need to respond
-        // to the activity lifecycle
+        // manage other components that need to respond to the activity lifecycle
     }
 }
 ```
@@ -70,13 +70,14 @@ class MyActivity extends AppCompatActivity {
 尽管这个示例看起来很好，但是在实际应用程序中，您最终会有太多的调用来管理UI和其他组件，以响应生命周期的当前状态。
 管理多个组件会在生命周期方法中放置大量的代码，比如onStart()和onStop()，这使得它们很难维护。
 
-此外，不能保证组件在活动或片段停止之前启动。如果我们需要执行长时间运行的操作（例如某些配置检入），则尤其如此在onStart()。
-onStop()方法在onStart()之前结束，从而使组件存活的时间超过所需的时间。
+此外，不能保证组件在活动或片段停止之前启动。如果我们需要执行长时间运行的操作（例如某些配置检入），则尤其如此。
+这可能会导致一个竞态条件，即onStop()方法在onStart()之前结束，从而使组件存活的时间超过所需的时间。
 
 ```
 class MyActivity extends AppCompatActivity {
     private MyLocationListener myLocationListener;
 
+    @Override
     public void onCreate(...) {
         myLocationListener = new MyLocationListener(this, location -> {
             // update UI
@@ -98,6 +99,7 @@ class MyActivity extends AppCompatActivity {
     public void onStop() {
         super.onStop();
         myLocationListener.stop();
+        // manage other components that need to respond to the activity lifecycle
     }
 }
 ```
@@ -105,41 +107,94 @@ class MyActivity extends AppCompatActivity {
 android.arch.lifecycle 软件包提供了类和接口，可帮助您以一种灵活和隔离的方式处理这些问题。
 
 
+## 添加依赖
+
+在项目build.gradle文件中添加以下依赖
+
+```
+dependencies {
+    def lifecycle_version = "1.1.1"
+
+    // ViewModel and LiveData
+    implementation "android.arch.lifecycle:extensions:$lifecycle_version"
+    // alternatively - just ViewModel
+    implementation "android.arch.lifecycle:viewmodel:$lifecycle_version" // For Kotlin use viewmodel-ktx
+    // alternatively - just LiveData
+    implementation "android.arch.lifecycle:livedata:$lifecycle_version"
+    // alternatively - Lifecycles only (no ViewModel or LiveData).
+    //     Support library depends on this lightweight import
+    implementation "android.arch.lifecycle:runtime:$lifecycle_version"
+
+    annotationProcessor "android.arch.lifecycle:compiler:$lifecycle_version" // For Kotlin use kapt instead of annotationProcessor
+    // alternately - if using Java8, use the following instead of compiler
+    implementation "android.arch.lifecycle:common-java8:$lifecycle_version"
+
+    // optional - ReactiveStreams support for LiveData
+    implementation "android.arch.lifecycle:reactivestreams:$lifecycle_version"
+
+    // optional - Test helpers for LiveData
+    testImplementation "android.arch.core:core-testing:$lifecycle_version"
+}
+```
+
+AndroidX
+
+```
+dependencies {
+    def lifecycle_version = "2.0.0"
+
+    // ViewModel and LiveData
+    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
+    // alternatively - just ViewModel
+    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version" // For Kotlin use lifecycle-viewmodel-ktx
+    // alternatively - just LiveData
+    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
+    // alternatively - Lifecycles only (no ViewModel or LiveData). Some UI AndroidX libraries use this lightweight import for Lifecycle
+    implementation "androidx.lifecycle:lifecycle-runtime:$lifecycle_version"
+
+    annotationProcessor "androidx.lifecycle:lifecycle-compiler:$lifecycle_version" // For Kotlin use kapt instead of annotationProcessor
+    // alternately - if using Java8, use the following instead of lifecycle-compiler
+    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
+
+    // optional - ReactiveStreams support for LiveData
+    implementation "androidx.lifecycle:lifecycle-reactivestreams:$lifecycle_version" // For Kotlin use lifecycle-reactivestreams-ktx
+
+    // optional - Test helpers for LiveData
+    testImplementation "androidx.arch.core:core-testing:$lifecycle_version"
+}
+```
+
 ## 生命周期
 
 Lifecycle是一个类，它保存关于组件(如活动或片段)生命周期状态的信息，并允许其他对象观察这个状态。
 
 Lifecycle使用两个主要枚举来跟踪其关联组件的生命周期状态:
 
-* Event
+* Event：从框架和Lifecycle类调度的生命周期事件 。这些事件映射到活动和片段中的回调事件。
 
-  从框架和Lifecycle类调度的生命周期事件 。这些事件映射到活动和片段中的回调事件。
+* State：Lifecycle对象跟踪的组件的当前状态 。
 
-* State
+![lifecycle_states](images/lifecycle_states.png)
 
-  Lifecycle对象跟踪的组件的当前状态 。
+将状态视为图的节点，将事件视为这些节点之间的边。
 
-  ![lifecycle_states](images/lifecycle_states.png)
+类可以通过向其方法添加注释来监视组件的生命周期状态。然后你可以通过调用Lifecycle类的addObserver()方法来传递观察者的实例来添加观察者，如以下示例所示：
 
-  将状态视为图的节点，将事件视为这些节点之间的边。
-
-  类可以通过向其方法添加注释来监视组件的生命周期状态。然后你可以通过调用Lifecycle类的addObserver()方法来传递观察者的实例来添加观察者，如以下示例所示：
-
-  ```
-  public class MyObserver implements LifecycleObserver {
-      @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-      public void connectListener() {
-          ...
-      }
-
-      @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-      public void disconnectListener() {
-          ...
-      }
+```
+public class MyObserver implements LifecycleObserver {
+  @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+  public void connectListener() {
+      ...
   }
 
-  myLifecycleOwner.getLifecycle().addObserver(new MyObserver());
-  ```
+  @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+  public void disconnectListener() {
+      ...
+  }
+}
+
+myLifecycleOwner.getLifecycle().addObserver(new MyObserver());
+```
 
 ## LifecycleOwner
 
@@ -246,8 +301,8 @@ public class MyActivity extends Activity implements LifecycleOwner {
 * 将数据逻辑放到ViewModel类中。ViewModel应该充当UI控制器和应用程序其余部分之间的连接器。不过要注意，ViewModel并不负责获取数据(例如，从网络中)。
   相反，ViewModel应该调用适当的组件来获取数据，然后将结果返回给UI控制器。
 * 使用数据绑定来维护视图和UI控制器之间的干净界面。这使您可以使视图更具说明性，并最大限度地减少在活动和片段中编写所需的更新代码。
-  如果您更喜欢用Java编程语言执行此操作，请使用像Butter Knife这样的库 来避免样板代码并具有更好的抽象。
-* 如果您的UI很复杂，请考虑创建一个 presenter 类来处理UI修改。这可能是一项艰巨的任务，但它可以使您的UI组件更容易测试。
+  如果您更喜欢用Java编程语言执行此操作，请使用像ButterKnife这样的库来避免样板代码并具有更好的抽象。
+* 如果您的UI很复杂，请考虑创建一个presenter类来处理UI修改。这可能是一项艰巨的任务，但它可以使您的UI组件更容易测试。
 * 避免在ViewModel中引用View或Activity上下文。如果ViewModel比活动活得长(在配置更改的情况下)，您的活动就会泄漏，垃圾收集器也不会正确地处理它。
 
 
@@ -267,8 +322,8 @@ public class MyActivity extends Activity implements LifecycleOwner {
 当一个Lifecycle属于AppCompatActivity或Fragment时，当调用AppCompatActivity或Fragment的onSaveInstanceState()时，
 Lifecycle的状态更改为CREATED, ON_STOP事件被分派。
 
-当通过onSaveInstanceState()保存片段或AppCompatActivity的状态时，它的UI被认为是不可变的，直到 ON_START被调用。
-试图在保存状态后修改UI可能会导致应用程序导航状态不一致，这就是为什么FragmentManager在应用程序运行FragmentTransaction保存后状态时抛出异常的原因。
+当通过onSaveInstanceState()保存片段或AppCompatActivity的状态时，它的UI被认为是不可变的，直到调用ON_START。
+试图在保存状态后修改UI可能会导致应用程序导航状态不一致，这就是为什么如果应用程序在保存状态后运行一个FragmentTransaction，那么FragmentManager会抛出异常。
 
 LiveData通过避免在至少没有启动观察者的关联生命周期的情况下调用它的观察者来防止这种情况的发生。在幕后它 isAtLeast()在决定调用其观察者之前调用。
 
@@ -285,65 +340,3 @@ LiveData通过避免在至少没有启动观察者的关联生命周期的情况
 > **注意**：为了使这个流程更简单，并提供与旧版本更好的兼容性，从版本1.0.0-rc1开始，，Lifecycle对象被标记为CREATED，
 当调用onSaveInstanceState()而不需要等待对onStop()方法的调用时，ON_STOP被分派。
 这不太可能影响您的代码，但您需要注意这一点，因为它与API级别26或更低的Activity类中的调用顺序不匹配。
-
-
-
-
-
-## 使用
-
-1.在build.gradle文件中添加gradle依赖关系
-
-```
-dependencies {
-    def lifecycle_version = "1.1.1"
-
-    // ViewModel and LiveData
-    implementation "android.arch.lifecycle:extensions:$lifecycle_version"
-    // just ViewModel
-    implementation "android.arch.lifecycle:viewmodel:$lifecycle_version" // use -ktx for Kotlin
-    // just LiveData
-    implementation "android.arch.lifecycle:livedata:$lifecycle_version"
-    // Lifecycles only (no ViewModel or LiveData).
-    // Support library depends on this lightweight import
-    implementation "android.arch.lifecycle:runtime:$lifecycle_version"
-
-    annotationProcessor "android.arch.lifecycle:compiler:$lifecycle_version"
-    // if using Java8, use the following instead of compiler
-    implementation "android.arch.lifecycle:common-java8:$lifecycle_version"
-
-    // 可选 - ReactiveStreams support for LiveData
-    implementation "android.arch.lifecycle:reactivestreams:$lifecycle_version"
-
-    // 可选 - Test helpers for LiveData
-    testImplementation "android.arch.core:core-testing:$lifecycle_version"
-}
-```
-
-AndroidX
-
-```
-dependencies {
-    def lifecycle_version = "2.0.0-alpha1"
-
-    // ViewModel and LiveData
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
-    // just ViewModel
-    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version" // use -ktx for Kotlin
-    // just LiveData
-    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
-    // alternatively - Lifecycles only (no ViewModel or LiveData). Some UI
-    // AndroidX libraries use this lightweight import for Lifecycle
-    implementation "androidx.lifecycle:lifecycle-runtime:$lifecycle_version"
-
-    annotationProcessor "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
-    // if using Java8, use the following instead of lifecycle-compiler
-    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
-
-    // 可选 - ReactiveStreams support for LiveData
-    implementation "androidx.lifecycle:lifecycle-reactivestreams:$lifecycle_version" // use -ktx for Kotlin
-
-    // 可选 - Test helpers for LiveData
-    testImplementation "androidx.arch.core:core-testing:$lifecycle_version"
-}
-```

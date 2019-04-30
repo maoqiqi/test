@@ -19,7 +19,7 @@ LiveData是一个可观察的数据持有者类。与常规observable不同，Li
 
 ## 概述
 
-LiveData认为，如果一个观察者的生命周期处于STARTED或RESUMED状态，那么这个观察者(由observer类表示)就处于活动状态。
+LiveData认为，如果一个观察者的生命周期处于STARTED或RESUMED状态，那么这个观察者(由Observer类表示)就处于活动状态。
 LiveData只将更新通知活动观察者。注册为监视LiveData对象的非活动观察者不会收到有关更改的通知。
 
 您可以注册一个与实现LifecycleOwner接口的对象配对的观察者。当相应的Lifecycle对象的状态更改为DESTROYED时，此关系允许删除观察者。
@@ -67,7 +67,7 @@ LiveData只将更新通知活动观察者。注册为监视LiveData对象的非�
    通常将观察者对象附加到UI控制器中，例如活动或片段。
 
 > **注意**：您可以使用observeForever(observer)方法注册一个没有关联LifecycleOwner对象的观察者。
-在这种情况下，观察者总是被认为是活跃的，因此总是被通知修改。您可以删除调用removeObserver(Observer)方法的这些观察者。
+在这种情况下，观察者总是被认为是活跃的，因此总是被通知修改。您可以调用removeObserver(Observer)方法删除这些观察者。
 
 当您更新LiveData对象中存储的值时，只要附加的LifecycleOwner处于活动状态，它就会触发所有已注册的观察者。
 
@@ -129,7 +129,6 @@ public class NameActivity extends AppCompatActivity {
         // Get the ViewModel.
         model = ViewModelProviders.of(this).get(NameViewModel.class);
 
-
         // Create the observer which updates the UI.
         final Observer<String> nameObserver = new Observer<String>() {
             @Override
@@ -164,8 +163,7 @@ button.setOnClickListener(new OnClickListener() {
 });
 ```
 
-在示例中调用setValue(T)会导致观察者使用值John Doe调用他们的onChanged()方法。该示例显示一个按钮按下，但是可以调用setValue()或postValue()来更新mName，
-原因有很多，包括响应网络请求或完成数据库加载;在所有情况下，对setValue()或postValue()的调用都会触发观察者并更新UI。
+在示例中调用setValue(T)会导致观察者使用值John Doe调用他们的onChanged()方法。对setValue()或postValue()的调用都会触发观察者并更新UI。
 
 > **注意**:必须调用setValue(T)方法才能从主线程更新LiveData对象。如果代码在工作线程中执行，则可以使用postValue(T)方法来更新LiveData对象。
 
@@ -174,7 +172,7 @@ button.setOnClickListener(new OnClickListener() {
 Room持久性库支持可观察的查询，这些查询返回LiveData对象。可观察查询是作为数据库访问对象(DAO)的一部分编写的。
 
 在更新LiveData数据库时，Room会生成更新对象所需的所有代码。生成的代码在需要时在后台线程上异步运行查询。
-此模式对于使UI中显示的数据与存储在数据库中的数据保持同步非常有用。您可以在[Room](room.md)中阅读有关Room和DAO的更多信息。
+此模式对于使UI中显示的数据与存储在数据库中的数据保持同步非常有用。您可以在[Room Persistence Library](room.md)中阅读有关的更多信息。
 
 
 ## 扩展LiveData
@@ -368,8 +366,8 @@ class MyViewModel extends ViewModel {
 ### 创建新的转换
 
 在您的应用程序中，有十几个不同的特定转换可能有用，但它们不是默认提供的。要实现自己的转换，可以使用MediatorLiveData类，它侦听其他LiveData对象并处理它们发出的事件。
-MediatorLiveData正确地将其状态传播到源LiveData对象。要了解关于此模式的更多信息，请参阅
-[Transformations](https://developer.android.google.cn/reference/android/arch/lifecycle/Transformations.html)类的参考文档。
+MediatorLiveData正确地将其状态传播到源LiveData对象要了解关于此模式的更多信息，请参阅
+ [Transformations](https://developer.android.google.cn/reference/android/arch/lifecycle/Transformations.html) 类的参考文档。
 
 
 ## 合并多个LiveData

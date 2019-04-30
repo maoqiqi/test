@@ -2,16 +2,14 @@
 
 ViewModel类旨在以生命周期有意识的方式存储和管理用户界面相关的数据。ViewModel类允许数据在配置更改(如屏幕旋转)之后存活。
 
-
 ## 目录
 
 * [概述](#概述)
 * [实现ViewModel](#实现ViewModel)
 * [ViewModel的生命周期](#ViewModel的生命周期)
 * [在片段之间共享数据](#在片段之间共享数据)
-* [用ViewModel替换加载器]
+* [用ViewModel替换加载器](#用ViewModel替换加载器)
 * [更多的信息](#更多的信息)
-
 
 ## 概述
 
@@ -72,15 +70,15 @@ public class MyActivity extends AppCompatActivity {
 
 > 注意：ViewModel决不能引用视图，Lifecycle或任何可能包含对活动上下文引用的类。
 
-ViewModel对象被设计为比视图的特定实例更长久 LifecycleOwners。这种设计还意味着您可以编写测试来更容易地覆盖视图模型，因为它不知道视图和生命周期对象。
-ViewModel 对象可以包含 LifecycleObservers，例如 LiveData对象。但是， ViewModel对象必须永远不会观察到生命周期感知的可观察LiveData对象（例如对象）的更改。
+ViewModel对象的设计寿命比视图或LifecycleOwners的特定实例长。这种设计还意味着您可以编写测试来更容易地覆盖视图模型，因为它不知道视图和生命周期对象。
+ViewModel对象可以包含LifecycleObservers，比如LiveData对象。但是， ViewModel对象必须永远不会观察到生命周期感知的可观察LiveData对象（例如对象）的更改。
 如果ViewModel需要应用程序上下文，例如查找系统服务，它可以扩展AndroidViewModel类，并在构造函数中有一个接收应用程序的构造函数，因为应用程序类扩展了上下文。
 
 
 ## ViewModel的生命周期
 
 ViewModel对象的作用域是在获取ViewModel时传递给ViewModelProvider的Lifecycle。
-ViewModel一直保存在内存中，直到它的作用域永久消失:对于活动，当它结束时，而对于片段，当它被分离时。
+ViewModel一直保存在内存中，直到它的作用域永久消失。对于活动，当它结束时，而对于片段，当它被分离时。
 
 ![view_model_lifecycle](images/view_model_lifecycle.png)
 
@@ -158,6 +156,6 @@ ViewModel与Room和LiveData一起工作来替换加载器。视图模型确保�
 ## 更多的信息
 
 随着数据变得越来越复杂，您可能会选择使用一个单独的类来加载数据。ViewModel的目的是封装UI控制器的数据，使数据在配置更改后仍然存在。
-有关如何跨配置更改加载、持久化和管理数据的信息，请参阅保存UI状态。
+有关如何跨配置更改加载、持久化和管理数据的信息，请参阅[Saving UI States](saving_states.md)。
 
-Android应用程序架构指南建议构建一个存储库类来处理这些功能。
+Android应用程序架构指南建议构建一个repository类来处理这些功能。
