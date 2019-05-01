@@ -13,6 +13,7 @@ ViewModel类旨在以生命周期有意识的方式存储和管理用户界面�
 * [对于ViewModel保存状态模块](#对于ViewModel保存状态模块)
   * [设置和使用](#设置和使用)
   * [存储和检索值](#存储和检索值)
+  * [可接受的类](#可接受的类)
 
 
 ## 概述
@@ -179,5 +180,40 @@ UI状态通常存储或引用在ViewModel对象中，而不是活动中;因此�
 
 ### 设置和使用
 
+要将"保存的状态"模块导入Android项目，请参阅[Handling Lifecycle](lifecycle.md)发布说明中声明依赖项的说明。
+
+为了设置一个ViewModel来接收SavedStateHandle，您需要使用一个扩展AbstractSavedStateVMFactory的工厂来创建它们。
+
+```
+SavedStateViewModel vm = new ViewModelProvider(this, new SavedStateVMFactory(this)).get(SavedStateViewModel.class);
+```
+
+然后，你的ViewModel可以有一个构造函数来接收SavedStateHandle:
+
+```
+public class SavedStateViewModel extends ViewModel {
+
+    private SavedStateHandle mState;
+
+    public SavedStateViewModel(SavedStateHandle savedStateHandle) {
+        mState = savedStateHandle;
+    }
+    ...
+}
+```
 
 ### 存储和检索值
+
+SavedStateHandle类具有键值映射所需的方法:
+
+* get(String key)
+* contains(String key)
+* remove(String key)
+* set(String key, T value)
+* keys()
+
+此外，还有一个特殊的方法:getLiveData(String key)，它返回包装在LiveData可观察值中的值。
+
+### 可接受的类
+
+[Acceptable classes](https://developer.android.google.cn/topic/libraries/architecture/viewmodel-savedstate#acceptable-classes)。
