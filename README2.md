@@ -49,6 +49,10 @@ Android Architecture Blueprints 使用不同的架构概念和工具实现相同
     * 作为比较和对比该项目中其他kotlin样本的参考点。
     * 与mvp java项目相比，利用习惯用语kotlin来提高可读性和限制冗长。
 
+* mvp-rxjava
+
+  这个应用程序基于mvp示例。并使用RxJava 2进行数据模型和演示者层之间的通信。
+
 * mvvm-databinding
 
     该示例使用数据绑定库来显示数据并将UI元素绑定到操作。为这个项目中的其他databinding示例提供了基础。样本的目的是:
